@@ -7,8 +7,8 @@ import java.util.Scanner;
 public class Client {
 
   private static Socket socket;
-  private static Thread sender;
-  private static Thread receiver;
+  private static Sender sender;
+  private static Receiver receiver;
   private static String Ip;
   private static String name;
 
@@ -26,11 +26,12 @@ public class Client {
       socket = new Socket(Ip, Port);
 
       System.out.println("Server connect");
-      sender = new Thread(new Sender(socket,name)); //send thread
-      receiver = new Thread(new Receiver(socket));
+      sender = new Sender(socket, name); //send thread
+      receiver = new Receiver(socket);
 
-      sender.start();
-      receiver.start();
+      new Thread(sender).start();
+      new Thread(receiver).start();
+      
     } catch(ConnectException e1) {
       e1.printStackTrace();
     } catch(Exception e2) {
@@ -149,7 +150,6 @@ public class Client {
     Socket socket;
     BufferedReader in;
     String[] command;
-    String message;
     String check;
     Receiver(Socket socket) {
       this.socket = socket;
@@ -163,10 +163,10 @@ public class Client {
     public void run() {
       while(in!=null) {
           try {
-            message = in.readLine();
-            if(message == null) {
-              continue;
+            if(socket.isClosed()) {
+              break;
             }
+            String message = in.readLine();
             if(message.startsWith("#PORT")) {
               command = message.split(" ", 2);
               JoinServer(command[1]);
@@ -175,6 +175,7 @@ public class Client {
               System.out.println(message);
         } catch (IOException e) {
           e.printStackTrace();
+          break;
         }
       }
     } //run
@@ -227,18 +228,19 @@ public class Client {
     }
   }//joinserver
 
+  
   private static void closeall() {
     try {
       if (sender != null) {
-          sender.close();
           sender.interrupt();
-          sender.join();
+          sender.join();      
+          sender.close();
           sender = null;
       }
       if (receiver != null) {
-          receiver.close();
           receiver.interrupt();
           receiver.join();
+          receiver.close();
           receiver = null;
       }
       if (socket != null && !socket.isClosed()) {

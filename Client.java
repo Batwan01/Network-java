@@ -45,6 +45,7 @@ public class Client {
     Socket socket;
     PrintWriter out;
     String name;
+    private volatile boolean shouldRun = true;
 
     Sender(Socket socket, String name) {
       this.socket = socket;
@@ -63,7 +64,7 @@ public class Client {
           out.println(name);
           out.println(name + "이름으로 연결되었습니다.");
         }
-        while(out!=null) {
+        while(shouldRun && !Thread.currentThread().isInterrupted()) {
           
           message = sc.nextLine();
           if ("/server list".equalsIgnoreCase(message)) {
@@ -123,6 +124,7 @@ public class Client {
 
     public void close() {
       try {
+          shouldRun = false;
           if (out != null) {
             out.close();
           }
@@ -150,8 +152,9 @@ public class Client {
     Socket socket;
     BufferedReader in;
     String[] command;
-    String message;
     String check;
+    private volatile boolean shouldRun = true;
+
     Receiver(Socket socket) {
       this.socket = socket;
       try{
@@ -162,12 +165,12 @@ public class Client {
     } //생성자
 
     public void run() {
-      while(in!=null) {
+      while(shouldRun && !Thread.currentThread().isInterrupted()) {
           try {
-            message = in.readLine();
-            if(message == null) {
-              continue;
+            if(socket.isClosed()) {
+              break;
             }
+            String message = in.readLine();
             if(message.startsWith("#PORT")) {
               command = message.split(" ", 2);
               JoinServer(command[1]);
@@ -175,6 +178,9 @@ public class Client {
             else
               System.out.println(message);
         } catch (IOException e) {
+          if (!shouldRun) {
+            break;
+          }
           e.printStackTrace();
         }
       }
@@ -182,6 +188,7 @@ public class Client {
 
     public void close() {
       try {
+          shouldRun = false;
           if (in != null) {
               in.close();
           }
@@ -232,24 +239,22 @@ public class Client {
   private static void closeall() {
     try {
       if (sender != null) {
-          sender.close();
           sender.interrupt();
-          sender.join();
+          sender.join();      
+          sender.close();
           sender = null;
       }
       if (receiver != null) {
-          receiver.close();
           receiver.interrupt();
           receiver.join();
+          receiver.close();
           receiver = null;
       }
       if (socket != null && !socket.isClosed()) {
           socket.close();
       }
-    } catch (InterruptedException e1) {
-      e1.printStackTrace();
-    } catch (IOException e2) {
-      e2.printStackTrace();
+    } catch (InterruptedException | IOException e) {
+      e.printStackTrace();
     }
   } //close all
 
