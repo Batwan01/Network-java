@@ -11,7 +11,7 @@ public class Client {
   private static Receiver receiver;
   private static String Ip;
   private static String name;
-
+  private static boolean isjoin = false;
   public static void main(String args[]) {
     if(args.length!=3) {
       System.out.println("./Client IP Port name");
@@ -61,12 +61,23 @@ public class Client {
       String message = "";
       String check;
       try {
+         
         if(out!=null) {
           out.println(name);
-          out.println(name + "이름으로 연결되었습니다. \n /help를 입력하시면 명령어를 알 수 있습니다.");
+          System.out.println(name + "이름으로 연결되었습니다. \n/help를 입력하시면 명령어를 알 수 있습니다.");
         }
+        if(isjoin) {
+          isjoin = false;
+          out.println("join");
+        }
+        else
+          out.println("njoin");
+
         while(shouldRun && !Thread.currentThread().isInterrupted()) {
-          
+          if(sc == null) {
+            sc.next();
+            continue;
+          }
           message = sc.nextLine();
           if ("/server list".equalsIgnoreCase(message)) {
             out.println(message); // 서버에 명령어 전송
@@ -133,8 +144,10 @@ public class Client {
                     spaceCount++;
                 }
             }
-            if(spaceCount == 1)
+            if(spaceCount >= 1 && !(message.charAt(message.length()-1) == ' '))
               out.println(message);
+            else
+              System.out.println("잘못된 명령어 입니다.");
           }
           else if(message.startsWith("/kick")) {
             check = message;
@@ -153,11 +166,12 @@ public class Client {
             System.out.println("/server create name : 채팅방 만들기");
             System.out.println("/server join name : 채팅방 들어가기");
             System.out.println("/sever list : 채팅방 리스트보기");
+            System.out.println("/server delete : 채팅방 삭제하기");
             System.out.println("/user all list : 전체 유저 보기");
             System.out.println("/user list : 참여해 있는 방 유저 보기");
             System.out.println("/emoticon list: 이모티콘 종류 보기");
             System.out.println("/emoticon emoticonname : 이모티콘 보내기");
-            System.out.println("/announcement 내용 : 확성기");
+            System.out.println("/announcement color(red, blue, green) 내용 : 확성기");
             System.out.println("/kick name : 강퇴시키기(HOST만 가능)\n");
           }
           else if("/user list".equals(message)) {
@@ -174,7 +188,7 @@ public class Client {
                     spaceCount++;
                 }
             }
-            if (spaceCount == 2) {
+            if (spaceCount >= 2) {
               out.println(message);
             } else {
               System.out.println("잘못된 명령어 입니다.\n /w name message");
@@ -188,7 +202,9 @@ public class Client {
                     spaceCount++;
                 }
             }
-            if (spaceCount == 2) {
+            if (spaceCount == 2 && !(message.charAt(message.length()-1) == ' ')) {
+              out.println(message);
+            } else if(spaceCount ==1 ) {
               out.println(message);
             } else {
               System.out.println("잘못된 명령어 입니다.\n /server (create or join) name");
@@ -284,6 +300,7 @@ public class Client {
 
   public static void JoinServer(String newPort) {
     try {
+        isjoin = true;
         closeall();
 
         socket = new Socket(Ip, Integer.parseInt(newPort));
@@ -298,7 +315,6 @@ public class Client {
     }
   }//joinserver
 
-  
   private static void closeall() {
     try {
       if (sender != null) {
